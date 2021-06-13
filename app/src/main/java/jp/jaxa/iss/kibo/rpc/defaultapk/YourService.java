@@ -139,8 +139,14 @@ public class YourService extends KiboRpcService {
 
 
 
-        Mat coordinates = getCoordinates((int) (markerIDs.size().height), rvecs, tvecs);
+       // Mat coordinates = getCoordinates((int) (markerIDs.size().height), rvecs, tvecs);
 
+        //Log.d(TAG, coordinates.dump());
+
+        Log.i("current Position", api.getRobotKinematics().getPosition().toString());
+        Log.i("current Orientation", api.getRobotKinematics().getOrientation().toString());
+
+        /*
         String Coord = new String();
         for (int i = 0; i < coordinates.rows(); i++) {
             for (int j = 0; j < coordinates.cols(); j++) {
@@ -150,9 +156,8 @@ public class YourService extends KiboRpcService {
             }
         }
         sendData(MessageType.STRING, "data", Coord);
+        */
 
-        //Log.i("trust kine", java.util.Arrays.toString(new Kinematics[]{api.getTrustedRobotKinematics()}));
-        //Log.i("trust kine", ReflectionToStringBuilder.toString(api.getTrustedRobotKinematics()));
 
 
     }
@@ -274,9 +279,13 @@ public class YourService extends KiboRpcService {
             Calib3d.Rodrigues(rvec, rotMatrix);
             //rotMatrix= rotMatrix.t();
             rotMatrix = rotMatrix.inv();
+            Log.i("rotMat", rotMatrix.dump());
             Core.multiply(rotMatrix, Scalar.all(-1), rotMatrix);
+            Log.i("rotMat_scaler", rotMatrix.dump());
             Core.gemm(rotMatrix, tvec, 1, tvec, 0, tempResult, 0);
+            Log.i("tempResult", tempResult.dump());
             Core.add(result, tempResult, result);
+            Log.i("Result", result.dump());
             //debugMatrix("result",result);
         }
         Core.divide(result, Scalar.all(len), result);
