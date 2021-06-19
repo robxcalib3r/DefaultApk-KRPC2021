@@ -1,8 +1,6 @@
 package jp.jaxa.iss.kibo.rpc.defaultapk;
 
 //JAXA LIBRARY
-import gov.nasa.arc.astrobee.Kinematics;
-import gov.nasa.arc.astrobee.android.gs.MessageType;
 import jp.jaxa.iss.kibo.rpc.api.KiboRpcService;
 import gov.nasa.arc.astrobee.Result;
 import gov.nasa.arc.astrobee.types.Point;
@@ -23,7 +21,6 @@ import java.util.regex.Pattern;
 import android.graphics.Bitmap;
 import android.util.Log;
 
-import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.opencv.aruco.Aruco;
 import org.opencv.aruco.DetectorParameters;
 import org.opencv.aruco.Dictionary;
@@ -75,6 +72,8 @@ public class YourService extends KiboRpcService {
 
         //Aruco AR Tag reading starts from here
         Mat img = api.getMatNavCam();
+        //Core.rotate(img, img, Core.ROTATE_180);
+        //Core.flip(img, img, 1);
         //Vector<Integer> markerIDs = new Vector<>();
         Mat markerIDs = new Mat();
         List<Mat> markerCorners = new ArrayList<>();
@@ -100,51 +99,153 @@ public class YourService extends KiboRpcService {
 
         Aruco.detectMarkers(img, dictionary, markerCorners, markerIDs, param, rejectedImgpoints, cameraMatrix, distCoeffs);
 
-        int id[] = new int[markerIDs.rows()];
+        /*
+        int[] id = new int[markerIDs.rows()];
         for (int i = 0; i < markerIDs.rows(); i++) {
             //for (int j = 0; j< markerIDs.cols(); j++){
                 id[i] = (int) markerIDs.get(i, 0)[0];
             //}
         }
         Log.i("MarkerIDs", Arrays.toString(id));//sending data for each individual marker
+        */
 
-        /*
         for(Mat eachArr : markerCorners) {
             String dump = eachArr.dump();
             Log.d(TAG, dump);
-        } */
+        }
 
-
+        // List of detected tags
+        List<Tag> tags = new ArrayList<>();
 
         Mat rvecs = new Mat();
         Mat tvecs = new Mat();
-        float markerLen = 0.05f;
 
-        Aruco.estimatePoseSingleMarkers(markerCorners, markerLen, cameraMatrix, distCoeffs, rvecs, tvecs);
+        if (markerIDs.rows() > 0) {
 
-        String dump = rvecs.dump();
-        Log.d(TAG, dump);
-        String dump1 = tvecs.dump();
-        Log.d(TAG, dump1);
+            float markerLen = 0.05f;
 
-        Mat rotMat = new Mat(3,3, CvType.CV_32F);
-        for(int i=0; i < id.length; i++) {
-            for (int j = 0; j < 3; j++) {
-                Log.i("rvecs", String.valueOf(rvecs.get(i, 0)[j]));
-                //Calib3d.Rodrigues(rvecs.get(i,0), rotMat);   // 1x3 rotation vector to 3x3 rotation matrix
+            Aruco.estimatePoseSingleMarkers(markerCorners, markerLen, cameraMatrix, distCoeffs, rvecs, tvecs);
+
+            for (int i = 0; i < markerIDs.rows(); i++) {
+                Tag tag;
+
+                // Individual vectors for the tags
+                double[] tagRvecs = new double[3];
+                double[] tagTvecs = new double[3];
+
+                tagRvecs[0] = rvecs.get(i, 0)[0];
+                tagRvecs[1] = rvecs.get(i, 0)[1];
+                tagRvecs[2] = rvecs.get(i, 0)[2];
+                tagTvecs[0] = tvecs.get(i, 0)[0];
+                tagTvecs[1] = tvecs.get(i, 0)[1];
+                tagTvecs[2] = tvecs.get(i, 0)[2];
+
+                tag = new Tag(markerCorners.get(i), markerIDs.get(i, 0)[0], tagRvecs, tagTvecs);
+                tags.add(i, tag);
             }
+
         }
 
+        //TagListener(tags);
+
+        Log.i("Log_RVEC", rvecs.dump());
+        Log.i("LOG_TVEC", tvecs.dump());
 
 
 
+        /*
+        Mat rotMat1 = new Mat(3, 3, CvType.CV_64F);
+        Mat rotMat2 = new Mat(3, 3, CvType.CV_64F);
+        Mat rotMat3 = new Mat(3, 3, CvType.CV_64F);
+        Mat rotMat4 = new Mat(3, 3, CvType.CV_64F);
 
-       // Mat coordinates = getCoordinates((int) (markerIDs.size().height), rvecs, tvecs);
+        Mat temp = new Mat();
+        Mat.zeros(3, 1, CvType.CV_64F).copyTo(temp);
+        */
+        for(int i=0; i < 4; i++) {
+            for (int j = 0; j < 3; j++) {
+                Log.i("rvecs", String.valueOf(rvecs.get(i, 0)[j]));
+                //temp.put(j, 0, rvecs.get(i, 0)[j]);
+                //Log.i("rvecs_temp", String.valueOf(temp.get(j, 0)[0]));
+            }
+            //Log.d("temp", temp.dump());
+            /*
+            switch (i){
+                case 0: Calib3d.Rodrigues(temp, rotMat4); Log.d("rotmat4", rotMat4.dump()); break;
+                case 1: Calib3d.Rodrigues(temp, rotMat3); Log.d("rotmat3", rotMat3.dump()); break;
+                case 2: Calib3d.Rodrigues(temp, rotMat1); Log.d("rotmat1", rotMat1.dump()); break;
+                case 3: Calib3d.Rodrigues(temp, rotMat2); Log.d("rotmat2", rotMat2.dump()); break;
+                default: Log.e("error", "Some Error Happened");
+            }*/
+
+        }
+        /*
+        Mat Coord1 = new Mat();
+        Mat Coord2 = new Mat();
+        Mat Coord3 = new Mat();
+        Mat Coord4 = new Mat();
+
+        getCoordnRot(0, rvecs, tvecs, Coord4, rotMat4);
+        getCoordnRot(1, rvecs, tvecs, Coord3, rotMat3);
+        getCoordnRot(2, rvecs, tvecs, Coord1, rotMat1);
+        getCoordnRot(3, rvecs, tvecs, Coord2, rotMat2);
+
+        double[] Q1 = new double[3];
+        double[] Q2 = new double[3];
+        double[] Q3 = new double[3];
+        double[] Q4 = new double[3];
+
+        getQuat(rotMat1, Q1);
+        getQuat(rotMat2, Q2);
+        getQuat(rotMat3, Q3);
+        getQuat(rotMat4, Q4);
+
+        Log.i("Quaternion1", Arrays.toString(Q1));
+        Log.i("Quaternion2", Arrays.toString(Q2));
+        Log.i("Quaternion3", Arrays.toString(Q3));
+        Log.i("Quaternion4", Arrays.toString(Q4));
+        Log.i("Quaternion4", Arrays.toString(Q4));
+        */
+
+        // Mat coordinates = getCoordinates((int) (markerIDs.size().height), rvecs, tvecs);
 
         //Log.d(TAG, coordinates.dump());
 
+
+
         Log.i("current Position", api.getRobotKinematics().getPosition().toString());
         Log.i("current Orientation", api.getRobotKinematics().getOrientation().toString());
+        /*
+        float x_1 = api.getRobotKinematics().getOrientation().getX();
+        float y_1 = api.getRobotKinematics().getOrientation().getY();
+        float z_1 = api.getRobotKinematics().getOrientation().getZ();
+        float w_1 = api.getRobotKinematics().getOrientation().getW();
+
+        double cx = api.getRobotKinematics().getPosition().getX();
+        double cy = api.getRobotKinematics().getPosition().getY();
+        double cz = api.getRobotKinematics().getPosition().getZ();
+        */
+        //Quaternion q_0 = TagGetQuat(tags);
+        //Quaternion q_1 = new Quaternion(x_1, y_1, z_1, w_1);
+
+        double[] midpoint = getMidPoint(tags);
+        double[] q_mid = rot2point(midpoint[0], midpoint[1], midpoint[2]);
+
+        Quaternion q_2 = new Quaternion((float)q_mid[0], (float)q_mid[1], (float)q_mid[2],(float)q_mid[3]);
+        /*
+        try {
+            Log.i("dump data", tags.get(0).getRotMat().dump());
+            double[] Eul = RotationalToEuler.MatrixToYawPitchRoll(tags.get(0).getRotMat());
+            Log.i("Euler angle", Arrays.toString(Eul));
+        }
+        catch (Exception e){
+            Log.e("Error", e.toString());
+        }   */
+
+        //Quaternion result = addQuat(q_1, q_0);
+        Point cord = new Point();
+        //Point cord = tagGetPoint(tags);
+        api.relativeMoveTo(cord, q_2, true );
 
         /*
         String Coord = new String();
@@ -157,6 +258,25 @@ public class YourService extends KiboRpcService {
         }
         sendData(MessageType.STRING, "data", Coord);
         */
+
+        try{
+            api.flashlightControlFront(1);
+            api.laserControl(true);
+
+            api.takeSnapshot();
+            api.flashlightControlFront((0));
+
+        }
+        catch (Exception e){
+            Log.e("Error in Post-laser cond", e.toString());
+        }
+
+        moveToWrapper(11.21, -9.8, 4.79, 0, 0, -0.707, 0.707);
+        moveToWrapper(10.505, -8.65, 4.7,0, 0, -0.707, 0.707);
+
+        moveToWrapper(10.6, -8.0, 4.5, 0, 0, -0.707, 0.707);
+
+        api.reportMissionCompletion();
 
 
 
@@ -208,6 +328,7 @@ public class YourService extends KiboRpcService {
                 qrcode = new MultiFormatReader().decode(bitmap);
             } catch (Exception e) {
                 qrcode = null;
+                Log.e("qrCode error", e.toString());
             }
             ++loopCounter;
         }
@@ -228,7 +349,7 @@ public class YourService extends KiboRpcService {
         return Double.parseDouble(s);
     }
 
-    private void getQuaternion(Mat R, double Q[]) {         //Rotation matrix to Quaternion
+    private void getQuaternion(Mat R, double[] Q) {         //Rotation matrix to Quaternion
         double trace = R.get(0, 0)[0] + R.get(1, 1)[0] + R.get(2, 2)[0];
 
         if (trace > 0.0) {
@@ -254,10 +375,38 @@ public class YourService extends KiboRpcService {
 
     }
 
-    private Mat getCoordinates(int len, Mat rvecs, Mat tvecs) {
-        Mat result = new Mat();
+    private void getQuat(Mat r, double[] q){
+
+        double trace = r.get(0, 0)[0] +
+                r.get(1, 1)[0] +
+                r.get(2, 2)[0];
+//
+        if (trace > 0.0) {
+            double s = sqrt(trace + 1.0);
+            q[3] = (s * 0.5);
+            s = 0.5 / s;
+            q[0] = ((r.get(2, 1)[0] - r.get(1, 2)[0]) * s);
+            q[1] = ((r.get(0, 2)[0] - r.get(2, 0)[0]) * s);
+            q[2] = ((r.get(1, 0)[0] - r.get(0, 1)[0]) * s);
+        } else {
+            int i = r.get(0,0)[0] < r.get(1,1)[0] ?
+                    (r.get(1,1)[0] < r.get(2,2)[0] ? 2 : 1) :
+                    (r.get(0,0)[0] < r.get(2,2)[0] ? 2 : 0);
+            int j = (i + 1) % 3;
+            int k = (i + 2) % 3;
+//
+            double s = sqrt(r.get(i, i)[0] - r.get(j,j)[0] - r.get(k,k)[0] + 1.0);
+            q[i] = s * 0.5;
+            s = 0.5 / s;
+//
+            q[3] = (r.get(k,j)[0] - r.get(j,k)[0]) * s;
+            q[j] = (r.get(j,i)[0] + r.get(i,j)[0]) * s;
+            q[k] = (r.get(k,i)[0] + r.get(i,k)[0]) * s;
+        }
+    }
+
+    private void getCoordnRot(int len, Mat rvecs, Mat tvecs, Mat result, Mat rotMatrix) {
         Mat.zeros(3, 1, CvType.CV_64F).copyTo(result);
-        Mat rotMatrix = new Mat();
         Mat rvec = new Mat();
         Mat tvec = new Mat();
         Mat tempResult = new Mat();
@@ -266,7 +415,7 @@ public class YourService extends KiboRpcService {
         Mat.zeros(3, 1, CvType.CV_64F).copyTo(tempResult);
         //TODO: 20-06-2018 "change 1 below to len";
         //len=1;
-        for (int i = 0; i < len; i++) {
+        int i = len;
             rvec.put(0, 0, rvecs.get(i, 0)[0]);
             rvec.put(1, 0, rvecs.get(i, 0)[1]);
             rvec.put(2, 0, rvecs.get(i, 0)[2]);
@@ -287,11 +436,150 @@ public class YourService extends KiboRpcService {
             Core.add(result, tempResult, result);
             Log.i("Result", result.dump());
             //debugMatrix("result",result);
-        }
-        Core.divide(result, Scalar.all(len), result);
-        return result;
 
+        //Core.divide(result, Scalar.all(len), result);
+    }
+
+    private void TagListener(List<Tag> tags){
+        for (Tag tag : tags){
+            Log.i("id", tag.getId() + "");
+            double[] q = tag.getQuaternion();
+            Log.i("quaternion_0", String.valueOf(q[0]));
+            Log.i("quaternion_1", String.valueOf(q[1]));
+            Log.i("quaternion_2", String.valueOf(q[2]));
+            Log.i("quaternion_3", String.valueOf(q[3]));
+            Log.i("corners", tag.getCorners().dump());
+            Log.i("rvec_0", String.valueOf(tag.getRvecs()[0]));
+            Log.i("rvec_1", String.valueOf(tag.getRvecs()[1]));
+            Log.i("rvec_2", String.valueOf(tag.getRvecs()[2]));
+            Log.i("tvec_0", String.valueOf(tag.getTvecs()[0]));
+            Log.i("tvec_1", String.valueOf(tag.getTvecs()[1]));
+            Log.i("tvec_2", String.valueOf(tag.getTvecs()[2]));
+
+        }
+    }
+
+    private Quaternion TagGetQuat(List<Tag> tags){
+        double[] q = tags.get(0).getQuaternion();
+        final Quaternion quaternion = new Quaternion((float) q[0], (float) q[1],
+                (float) q[2], (float) q[3]);
+        return quaternion;
+    }
+
+    private Point tagGetPoint(List<Tag> tags){
+        double[] n = tags.get(0).getTvecs();
+        Point p = new Point(n[0], n[1], n[2]);
+        return p;
+    }
+
+    public Quaternion mulQuat(Quaternion q1, Quaternion q2){
+        float x = q1.getW() * q2.getX() + q1.getX()*q2.getW() + q1.getY()*q2.getZ() - q1.getZ()*q2.getY();
+        float y = q1.getW() * q2.getY() + q1.getY()*q2.getW() + q1.getZ()*q2.getX() - q1.getX()*q2.getZ();
+        float z = q1.getW() * q2.getZ() + q1.getZ()*q2.getW() + q1.getX()*q2.getY() - q1.getY()*q2.getX();
+        float w = q1.getW() * q2.getW() - q1.getX()*q2.getX() - q1.getY()*q2.getY() - q1.getZ()*q2.getZ();
+        final Quaternion q = new Quaternion(x, y, z, w);
+        Log.i("Quaternion_multiplication", q.toString());
+        return q;
+    }
+
+    public Quaternion addQuat(Quaternion q1, Quaternion q2){
+        float x = q1.getX() + q2.getX();
+        float y = q1.getY() + q2.getY();
+        float z = q1.getZ() + q2.getZ();
+        float w = q1.getW() + q2.getW();
+        final Quaternion q = new Quaternion(x, y, z, w);
+        Log.i("Quaternion_addition", q.toString());
+        return q;
+    }
+
+    public double[] getMidPoint(List<Tag> tags){
+        double temp_evenX = 0, temp_oddX = 0,
+                temp_evenY = 0, temp_oddY = 0,
+                temp_evenZ = 0, temp_oddZ = 0;
+        for (Tag tag : tags){
+            if(tag.getId() % 2 == 0){
+                temp_evenX += tag.getTvecs()[0];
+                temp_evenY += tag.getTvecs()[1];
+                temp_evenZ += tag.getTvecs()[2];
+            }
+            else{
+                temp_oddX += tag.getTvecs()[0];
+                temp_oddY += tag.getTvecs()[1];
+                temp_oddZ += tag.getTvecs()[2];
+            }
+        }
+
+        temp_evenX /= 2;
+        temp_evenY /= 2;
+        temp_evenZ /= 2;
+
+        temp_oddX /= 2;
+        temp_oddY /= 2;
+        temp_oddZ /= 2;
+
+        double x = (temp_evenX + temp_oddX) / 2;
+        double y = (temp_evenY + temp_oddY) / 2;
+        double z = (temp_evenZ + temp_oddZ) / 2;
+
+        double[] point = new double[]{x - 0.075,y + 0.075,z};
+        Log.i("getMidPoint", Arrays.toString(point));
+        return point;
 
     }
+
+    public double[] rot2point(double x, double y, double z){
+        double hype = sqrt(x*x + z*z);
+        double hype_1 = sqrt(hype*hype + y*y);
+        double[][] Rz = {{z/hype, -x/hype,  0}, {x/hype, z/hype, 0}, {0,0,1}};
+        double[][] Rx = {{1,0,0}, {0, hype/hype_1, y/hype_1}, {0, -y/hype_1, hype/hype_1}};
+        double[][] flip = {{0,1,0}, {-1,0,0}, {0,0,1}};
+        double[] q = new double[4];
+        Mat r = new Mat(3, 3, CvType.CV_64F);
+        Mat RZ = new Mat(3, 3, CvType.CV_64F);
+        Mat RX = new Mat(3, 3, CvType.CV_64F);
+        Mat r_flip = new  Mat(3, 3, CvType.CV_64F);
+
+        for (int i = 0; i<3; i++){
+            for (int j = 0; j<3; j++){
+                RZ.put(i, j, Rz[i][j]);
+                RX.put(i, j, Rx[i][j]);
+                r_flip.put(i, j, flip[i][j]);
+            }
+        }
+
+        Core.gemm(RZ, RX, 1, new Mat(),0, r);
+        Core.gemm(r, r_flip, 1, new Mat(), 0, r);
+
+        double trace = r.get(0, 0)[0] +
+                r.get(1, 1)[0] +
+                r.get(2, 2)[0];
+//
+        if (trace > 0.0) {
+            double s = sqrt(trace + 1.0);
+            q[3] = (s * 0.5);
+            s = 0.5 / s;
+            q[0] = ((r.get(2, 1)[0] - r.get(1, 2)[0]) * s);
+            q[1] = ((r.get(0, 2)[0] - r.get(2, 0)[0]) * s);
+            q[2] = ((r.get(1, 0)[0] - r.get(0, 1)[0]) * s);
+        } else {
+            int i = r.get(0, 0)[0] < r.get(1, 1)[0] ?
+                    (r.get(1, 1)[0] < r.get(2, 2)[0] ? 2 : 1) :
+                    (r.get(0, 0)[0] < r.get(2, 2)[0] ? 2 : 0);
+            int j = (i + 1) % 3;
+            int k = (i + 2) % 3;
+//
+            double s = sqrt(r.get(i, i)[0] - r.get(j, j)[0] - r.get(k, k)[0] + 1.0);
+            q[i] = s * 0.5;
+            s = 0.5 / s;
+//
+            q[3] = (r.get(k, j)[0] - r.get(j, k)[0]) * s;
+            q[j] = (r.get(j, i)[0] + r.get(i, j)[0]) * s;
+            q[k] = (r.get(k, i)[0] + r.get(i, k)[0]) * s;
+        }
+        Log.i("rot2Point", Arrays.toString(q));
+        return q;
+    }
+
+
 }
 
