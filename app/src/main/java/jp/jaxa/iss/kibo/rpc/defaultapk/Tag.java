@@ -36,19 +36,11 @@ public class Tag {
 
     public Mat getCorners() { return corners; }
 
-    public Mat getRotMat(){
-        Mat rvec = new Mat(1, 3, CvType.CV_64F),
-                r = new Mat(3, 3, CvType.CV_64F);
-        rvec.put(0, 0, rvecs);
-        Calib3d.Rodrigues(rvec, r);
-        return r;
-    }
-
     //public double[] getCoOrd(){
 
     //}
 
-
+/*
     public double[] getQuaternion() {
         double[] q = new double[4];
         Mat rvec = new Mat(1, 3, CvType.CV_64F),
@@ -102,6 +94,6 @@ public class Tag {
             q[k] = (r.get(k,i)[0] + r.get(i,k)[0]) * s;
         }
         return q;
-    }
+    } */
 
 }

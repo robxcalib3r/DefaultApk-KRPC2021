@@ -37,7 +37,7 @@ android {
 dependencies {
     compile project(':guest_science_library')
     compile project(':kibo_rpc_api')
-    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile fileTree(include: ['*.jar'], dir: 'libs')
     compile 'com.android.support:appcompat-v7:26.+'
     compile 'com.android.support.constraint:constraint-layout:1.0.2'
     compile('org.ros.rosjava_core:rosjava:[0.2,0.3)') {
@@ -50,8 +50,6 @@ dependencies {
     }
     testCompile 'junit:junit:4.12'
     compile 'com.quickbirdstudios:opencv:3.4.4-contrib'
-
     //To add ZXing library
-    compile group: 'com.google.zxing', name: 'core', version: '3.3.3'
-    compile 'com.quickbirdstudios:opencv:3.4.4-contrib'
+    compile group: 'com.google.zxing', name: 'core', version: '3.2.1'
 }
